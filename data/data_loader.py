@@ -104,7 +104,9 @@ class SpectrogramParser(AudioParser):
         if self.augment:
             y = load_randomly_augmented_audio(audio_path, self.sample_rate)
         else:
-            y = load_audio(audio_path)
+            #y = load_audio(audio_path)
+            # Serguei's modification to convert all input to 16 kHz 
+            y = audio_with_sox(audio_path,16000)
         if self.noiseInjector:
             add_noise = np.random.binomial(1, self.noise_prob)
             if add_noise:
@@ -271,15 +273,13 @@ def get_audio_length(path):
     return float(output)
 
 
-def audio_with_sox(path, sample_rate, start_time, end_time):
+def audio_with_sox(path, sample_rate):
     """
     crop and resample the recording with sox and loads it.
     """
     with NamedTemporaryFile(suffix=".wav") as tar_file:
         tar_filename = tar_file.name
-        sox_params = "sox \"{}\" -r {} -c 1 -b 16 -e si {} trim {} ={} >/dev/null 2>&1".format(path, sample_rate,
-                                                                                               tar_filename, start_time,
-                                                                                               end_time)
+        sox_params = "sox \"{}\" -r {} -c 1 -b 16 -e si {} >/dev/null 2>&1".format(path, sample_rate, tar_filename)
         os.system(sox_params)
         y = load_audio(tar_filename)
         return y
