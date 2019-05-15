@@ -3,6 +3,7 @@ import json
 import os
 import random
 import time
+import sys
 
 import numpy as np
 import torch.distributed as dist
@@ -213,8 +214,10 @@ if __name__ == '__main__':
     if args.mixed_precision:
         model = convert_model_to_half(model)
     parameters = model.parameters()
-    optimizer = torch.optim.SGD(parameters, lr=args.lr,
-                                momentum=args.momentum, nesterov=True, weight_decay=1e-5)
+    optimizer = torch.optim.SGD(parameters, lr=args.lr, momentum=args.momentum, nesterov=True, weight_decay=1e-5)
+
+    metas = model
+    
     if args.distributed:
         model = DistributedDataParallel(model)
     if args.mixed_precision:
@@ -224,6 +227,7 @@ if __name__ == '__main__':
     if optim_state is not None:
         optimizer.load_state_dict(optim_state)
     print(model)
+
     print("Number of parameters: %d" % DeepSpeech.get_param_size(model))
 
     criterion = CTCLoss()
@@ -231,7 +235,7 @@ if __name__ == '__main__':
     data_time = AverageMeter()
     losses = AverageMeter()
 
-    for epoch in range(start_epoch, args.epochs):
+    for epoch in range(start_epoch, args.epochs-1):
         model.train()
         end = time.time()
         start_epoch_time = time.time()
@@ -359,7 +363,7 @@ if __name__ == '__main__':
 
         if main_proc and args.checkpoint:
             file_path = '%s/deepspeech_%d.pth.tar' % (save_folder, epoch + 1)
-            torch.save(DeepSpeech.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
+            torch.save(DeepSpeech.serialize(metas, model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
                                             wer_results=wer_results, cer_results=cer_results),
                        file_path)
         # anneal lr
@@ -370,12 +374,12 @@ if __name__ == '__main__':
 
         if main_proc and (best_wer is None or best_wer > wer):
             print("Found better validated model, saving to %s" % args.model_path)
-            torch.save(DeepSpeech.serialize(model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
+            torch.save(DeepSpeech.serialize(metas, model, optimizer=optimizer, epoch=epoch, loss_results=loss_results,
                                             wer_results=wer_results, cer_results=cer_results)
                        , args.model_path)
             best_wer = wer
-            avg_loss = 0
 
-        if not args.no_shuffle:
-            print("Shuffling batches...")
-            train_sampler.shuffle(epoch)
+            avg_loss = 0
+            if not args.no_shuffle:
+                print("Shuffling batches...")
+                train_sampler.shuffle(epoch)

@@ -256,17 +256,20 @@ class DeepSpeech(nn.Module):
         return model
 
     @staticmethod
-    def serialize(model, optimizer=None, epoch=None, iteration=None, loss_results=None,
+    def serialize(metas, model, optimizer=None, epoch=None, iteration=None, loss_results=None,
                   cer_results=None, wer_results=None, avg_loss=None, meta=None):
+
+     
+        
         package = {
-            'version': model.version,
-            'hidden_size': model.hidden_size,
-            'hidden_layers': model.hidden_layers,
-            'rnn_type': supported_rnns_inv.get(model.rnn_type, model.rnn_type.__name__.lower()),
-            'audio_conf': model.audio_conf,
-            'labels': model.labels,
+            'version': metas.version,
+            'hidden_size': metas.hidden_size,
+            'hidden_layers': metas.hidden_layers,
+            'rnn_type': supported_rnns_inv.get(metas.rnn_type, metas.rnn_type.__name__.lower()),
+            'audio_conf': metas.audio_conf,
+            'labels': metas.labels,
             'state_dict': model.state_dict(),
-            'bidirectional': model.bidirectional
+            'bidirectional': metas.bidirectional
         }
         if optimizer is not None:
             package['optim_dict'] = optimizer.state_dict()
