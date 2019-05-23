@@ -15,9 +15,13 @@ import math
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
+import re
+
 windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann, 'blackman': scipy.signal.blackman,
            'bartlett': scipy.signal.bartlett}
 
+# pattern to catch filled pauses in the transcripts
+fp_pattern = re.compile(r'(\s+|^)(UM+|AH+|UH+|EH+)(\s+|$)', re.IGNORECASE)
 
 def load_audio(path):
     sound, _ = torchaudio.load(path, normalization=True)
@@ -163,9 +167,11 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
         transcript = self.parse_transcript(transcript_path)
         return spect, transcript
 
+    # Serguei's modifications here to replace all UMs and AHs with  @ symbol
     def parse_transcript(self, transcript_path):
         with open(transcript_path, 'r', encoding='utf8') as transcript_file:
-            transcript = transcript_file.read().replace('\n', '')
+            transcript = transcript_file.read().replace('\n', ' ')
+            transcript = fp_pattern.sub(' @ ', transcript)
         transcript = list(filter(None, [self.labels_map.get(x) for x in list(transcript)]))
         return transcript
 

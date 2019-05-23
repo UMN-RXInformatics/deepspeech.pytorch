@@ -1,4 +1,5 @@
 import math
+import re
 from collections import OrderedDict
 
 import torch
@@ -242,6 +243,8 @@ class DeepSpeech(nn.Module):
         model = cls(rnn_hidden_size=package['hidden_size'], nb_layers=package['hidden_layers'],
                     labels=package['labels'], audio_conf=package['audio_conf'],
                     rnn_type=supported_rnns[package['rnn_type']], bidirectional=package.get('bidirectional', True))
+        # Serguei's hack - added the removal of "module" from start of each key in state_dict 
+        package['state_dict'] = { re.sub(r'^module\.', '',k): v for k, v in package['state_dict'].items() }
         model.load_state_dict(package['state_dict'])
         for x in model.rnns:
             x.flatten_parameters()
@@ -252,6 +255,8 @@ class DeepSpeech(nn.Module):
         model = cls(rnn_hidden_size=package['hidden_size'], nb_layers=package['hidden_layers'],
                     labels=package['labels'], audio_conf=package['audio_conf'],
                     rnn_type=supported_rnns[package['rnn_type']], bidirectional=package.get('bidirectional', True))
+        # Serguei's hack - added the removal of "module" from start of each key in state_dict 
+        package['state_dict'] = { re.sub(r'^module\.', '',k): v for k, v in package['state_dict'].items() }
         model.load_state_dict(package['state_dict'])
         return model
 
