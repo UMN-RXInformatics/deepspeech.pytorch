@@ -9,6 +9,7 @@ from torch.utils.data.sampler import Sampler
 import librosa
 import numpy as np
 import scipy.signal
+from scipy.io.wavfile import read
 import torch
 import torchaudio
 import math
@@ -23,15 +24,28 @@ windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann, 'blackman
 # pattern to catch filled pauses in the transcripts
 fp_pattern = re.compile(r'(\s+|^)(UM+|AH+|UH+|EH+)(\s+|$)', re.IGNORECASE)
 
+
+# load audio call from newer release
+# does not rely on torchaudio
 def load_audio(path):
-    sound, _ = torchaudio.load(path, normalization=True)
-    sound = sound.numpy().T
+    sample_rate, sound = read(path)
+    sound = sound.astype('float32') / 32767  # normalize audio
     if len(sound.shape) > 1:
         if sound.shape[1] == 1:
             sound = sound.squeeze()
         else:
             sound = sound.mean(axis=1)  # multiple channels, average
     return sound
+
+#def load_audio(path):
+#    sound, _ = torchaudio.load(path, normalization=True)
+#    sound = sound.numpy().T
+#    if len(sound.shape) > 1:
+#        if sound.shape[1] == 1:
+#            sound = sound.squeeze()
+#        else:
+#            sound = sound.mean(axis=1)  # multiple channels, average
+#    return sound
 
 
 class AudioParser(object):
@@ -108,9 +122,11 @@ class SpectrogramParser(AudioParser):
         if self.augment:
             y = load_randomly_augmented_audio(audio_path, self.sample_rate)
         else:
-            #y = load_audio(audio_path)
+            # load 16 kHz audio - make sure it has all been converted
+            y = load_audio(audio_path)
             # Serguei's modification to convert all input to 16 kHz 
-            y = audio_with_sox(audio_path,16000)
+            # use this if the audio has not been altered - much slower
+            #y = audio_with_sox(audio_path,16000)
         if self.noiseInjector:
             add_noise = np.random.binomial(1, self.noise_prob)
             if add_noise:

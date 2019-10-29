@@ -260,7 +260,7 @@ if __name__ == '__main__':
 
     basename = os.path.basename(args.transcript)
     basename = re.sub(r'\.txt','',basename)
-   
+    basedir = os.path.dirname(args.transcript)
 
 
 
@@ -369,8 +369,12 @@ if __name__ == '__main__':
 
         txg.write(args.outputfile)
 
+    # run praat2py
+    pathtopraar2py = "/workspace/praat2py/praat2py/praat2py.py"
+    os.system("python2.7 " + pathtopraar2py + " -t words -p /usr/bin/praat -o " + basedir + " " + args.audio_path + " " + args.outputfile)
 
     # cleanup
-    os.system('rm '+args.tempdir+"/"+basename+".pth.tar ")
+    os.path.exists(args.tempdir+"/"+basename+".pth.tar"):
+        os.system('rm '+args.tempdir+"/"+basename+".pth.tar ")
     
 
