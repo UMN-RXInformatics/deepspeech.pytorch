@@ -374,7 +374,7 @@ if __name__ == '__main__':
     os.system("python2.7 " + pathtopraar2py + " -t words -p /usr/bin/praat -o " + basedir + " " + args.audio_path + " " + args.outputfile)
 
     # cleanup
-    os.path.exists(args.tempdir+"/"+basename+".pth.tar"):
+    if os.path.exists(args.tempdir+"/"+basename+".pth.tar"):
         os.system('rm '+args.tempdir+"/"+basename+".pth.tar ")
     
 
