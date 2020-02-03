@@ -16,7 +16,9 @@ import math
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 
+
 import re
+import json
 
 windows = {'hamming': scipy.signal.hamming, 'hann': scipy.signal.hann, 'blackman': scipy.signal.blackman,
            'bartlett': scipy.signal.bartlett}
@@ -168,13 +170,43 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
         :param normalize: Apply standard mean and deviation normalization to audio tensor
         :param augment(default False):  Apply random tempo and gain perturbations
         """
-        with open(manifest_filepath) as f:
-            ids = f.readlines()
-        ids = [x.strip().split(',') for x in ids]
-        self.ids = ids
-        self.size = len(ids)
+
+        # Serguei's change
+        # check to see if input a a json file and if so, treat the text as text, not file
+        if manifest_filepath.endswith("json"):
+            self.input = "json"
+            ids = []
+            with open(manifest_filepath) as f:
+                for line in f:
+                    line = re.sub(r'\\',' ',line)
+                try:
+                    p = json.loads(line)
+                    p["text"] = self.remove_control_characters(p["text"])
+                    p["text"] = re.sub(r'\n+',' ',p["text"])
+                    p["text"] = re.sub(r'\,',' ',p["text"])
+                    p["text"] = re.sub(r'\s+',' ',p["text"])
+                    
+                    ids.append([p["audio_filepath"],p["text"]])                     
+  
+                except ValueError as e:
+                    print(line) 
+
+            self.ids = ids
+            self.size = len(ids)
+
+        else:
+            self.input = "csv"
+            with open(manifest_filepath) as f:
+                ids = f.readlines()
+            ids = [x.strip().split(',') for x in ids]
+            self.ids = ids
+            self.size = len(ids)
+
         self.labels_map = dict([(labels[i], i) for i in range(len(labels))])
         super(SpectrogramDataset, self).__init__(audio_conf, normalize, augment)
+
+    def remove_control_characters(self,line):
+        return ''.join(c for c in line if ord(c) >= 32)
 
     def __getitem__(self, index):
         sample = self.ids[index]
@@ -185,9 +217,15 @@ class SpectrogramDataset(Dataset, SpectrogramParser):
 
     # Serguei's modifications here to replace all UMs and AHs with  @ symbol
     def parse_transcript(self, transcript_path):
-        with open(transcript_path, 'r', encoding='utf8') as transcript_file:
-            transcript = transcript_file.read().replace('\n', ' ')
+
+        if self.input == "csv":
+            with open(transcript_path, 'r', encoding='utf8') as transcript_file:
+                transcript = transcript_file.read().replace('\n', ' ')
+                transcript = fp_pattern.sub(' @ ', transcript)
+        else:
+            transcript = transcript_path.replace('\n', ' ')
             transcript = fp_pattern.sub(' @ ', transcript)
+
         transcript = list(filter(None, [self.labels_map.get(x) for x in list(transcript)]))
         return transcript
 

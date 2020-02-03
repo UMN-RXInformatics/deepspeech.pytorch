@@ -1,5 +1,5 @@
 import argparse
-
+import re
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -64,6 +64,9 @@ if __name__ == '__main__':
         target_strings = target_decoder.convert_to_strings(split_targets)
         for x in range(len(target_strings)):
             transcript, reference = decoded_output[x][0], target_strings[x][0]
+            reference = re.sub(r'\@','',reference)
+            transcript = re.sub(r'\@','',transcript)
+            if len(reference) == 0 or len(reference.split()) == 0: continue
             wer_inst = decoder.wer(transcript, reference)
             cer_inst = decoder.cer(transcript, reference)
             total_wer += wer_inst
